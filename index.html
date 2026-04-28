@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Video Magic | Vijit</title>
+    <title>AI Video Magic | Nuantra</title>
     <style>
         :root { --bg: #0d1117; --card: #161b22; --blue: #58a6ff; --green: #238636; --red: #da3633; --border: #30363d; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: #c9d1d9; display: flex; justify-content: center; padding: 40px 20px; margin: 0; }
-        .container { background: var(--card); padding: 32px; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); border: 1px solid var(--border); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
-        h2 { color: var(--blue); margin: 0; font-size: 1.5rem; letter-spacing: -0.5px; }
-        .badge { background: #1f6feb; color: white; padding: 8px 16px; border-radius: 30px; font-weight: 800; font-size: 0.85rem; }
-        .input-group { margin-bottom: 20px; }
-        label { display: block; font-size: 0.7rem; font-weight: 800; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; }
-        input, textarea { width: 100%; padding: 14px; background: #0d1117; border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 0.95rem; box-sizing: border-box; }
-        button { width: 100%; padding: 16px; background: var(--green); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+        .container { background: var(--card); padding: 32px; border-radius: 16px; width: 100%; max-width: 480px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        h2 { color: var(--blue); margin: 0; font-size: 1.4rem; }
+        .badge { background: #1f6feb; color: white; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; }
+        .input-group { margin-bottom: 18px; }
+        label { display: block; font-size: 0.7rem; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 6px; }
+        input, textarea { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; color: white; font-size: 0.9rem; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; background: var(--green); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
-        #status { margin-top: 24px; text-align: center; font-size: 0.9rem; }
-        .error-box { color: var(--red); background: rgba(218, 54, 51, 0.1); border: 1px solid var(--red); padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-top: 15px; text-align: left; }
-        .debug-panel { margin-top: 20px; padding: 10px; background: #010409; border: 1px dashed #30363d; font-family: monospace; font-size: 0.7rem; color: #7ee787; display: none; overflow-x: auto; }
+        #status { margin-top: 20px; }
+        .error-msg { background: rgba(218, 54, 51, 0.1); border: 1px solid var(--red); color: #ff7b72; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-top: 10px; }
+        .raw-debug { background: #010409; border: 1px dashed var(--border); padding: 10px; font-family: monospace; font-size: 0.75rem; color: #7ee787; margin-top: 15px; overflow-x: auto; }
     </style>
 </head>
 <body>
@@ -31,13 +31,13 @@
 
     <div class="input-group">
         <label>Account Email</label>
-        <input type="email" id="email" placeholder="john.doe@gmail.com" oninput="debounceFetch()">
+        <input type="email" id="email" placeholder="yourname@gmail.com" oninput="debounceFetch()">
     </div>
 
     <div class="input-group">
         <label>1. Upload Image (Multiples of 64)</label>
         <input type="file" id="imageInput" accept="image/*">
-        <small style="font-size:0.65rem; color:#8b949e;">Req: 768x768, 1024x576, etc.</small>
+        <small style="font-size:0.7rem; color:#8b949e;">Req: 768x768, 1024x576, etc.</small>
     </div>
 
     <div class="input-group">
@@ -45,55 +45,56 @@
         <textarea id="prompt" rows="2" placeholder="e.g., mascot blinks and smiles"></textarea>
     </div>
 
-    <button id="genBtn" onclick="startGeneration()">Generate Video</button>
+    <button id="genBtn" onclick="processMagic()">Generate Video</button>
 
     <div id="status"></div>
-    <div id="debug" class="debug-panel"></div>
+    <div id="debugBox" class="raw-debug" style="display:none;"></div>
 </div>
 
 <script>
-    // --- CONFIGURATION ---
-    // Update this to your ACTUAL Cloudflare Worker URL
+    // --- CHANGE THIS TO YOUR WORKER URL ---
     const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev/"; 
     
-    let fetchTimer;
+    let timer;
 
-    // Prevents making a request on every single keystroke
+    // Fetches credits after you stop typing for 600ms
     function debounceFetch() {
-        clearTimeout(fetchTimer);
-        fetchTimer = setTimeout(fetchCredits, 600);
+        clearTimeout(timer);
+        timer = setTimeout(fetchCredits, 600);
     }
 
     async function fetchCredits() {
         const email = document.getElementById('email').value.trim();
         const badge = document.getElementById('badge');
-        const debug = document.getElementById('debug');
+        const debugBox = document.getElementById('debugBox');
         
         if (!email.includes('@')) return;
 
         try {
-            const res = await fetch(`${WORKER_URL}?email=${encodeURIComponent(email)}`);
-            if (!res.ok) throw new Error(`Server Error: ${res.status}`);
+            // Added a timestamp to prevent browser caching issues
+            const res = await fetch(`${WORKER_URL}?email=${encodeURIComponent(email)}&t=${Date.now()}`);
+            
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             
             const data = await res.json();
             
-            // FIX: Access the first object inside the array returned by Supabase
+            // SHOW RAW DATA FOR DEBUGGING
+            debugBox.style.display = "block";
+            debugBox.innerText = `Raw Data: ${JSON.stringify(data)}`;
+
+            // Handle both Array and Object responses from the Worker
             const record = Array.isArray(data) ? data[0] : data;
-            
-            // If the record exists, use total_credits; otherwise, show 0
             const balance = (record && record.total_credits !== undefined) ? record.total_credits : 0;
             
             badge.innerText = `CREDITS: ${balance}`;
-            debug.style.display = "block";
-            debug.innerText = `Raw Data: ${JSON.stringify(data)}`;
         } catch (err) {
             badge.innerText = "CREDITS: Error";
-            debug.style.display = "block";
-            debug.innerText = `Fetch Failed: ${err.message}. Check if WORKER_URL is correct and CORS is enabled.`;
+            debugBox.style.display = "block";
+            debugBox.innerText = `Fetch Error: ${err.message}. Check Worker CORS settings.`;
         }
     }
 
-    async function startGeneration() {
+    async function processMagic() {
         const email = document.getElementById('email').value.trim();
         const imageFile = document.getElementById('imageInput').files[0];
         const status = document.getElementById('status');
@@ -101,15 +102,15 @@
 
         if (!email || !imageFile) return alert("Please provide email and image.");
 
-        // PRE-FLIGHT CHECK: Verify dimensions to avoid "Stability Refused"
+        // PRE-FLIGHT IMAGE CHECK
         const img = new Image();
         img.src = URL.createObjectURL(imageFile);
         img.onload = async () => {
             if (img.width % 64 !== 0 || img.height % 64 !== 0) {
-                status.innerHTML = `<div class="error-box"><b>Size Error:</b> ${img.width}x${img.height} is not valid. Both must be multiples of 64.</div>`;
+                status.innerHTML = `<div class="error-msg"><b>Refused:</b> Image is ${img.width}x${img.height}. Both width and height must be multiples of 64 (e.g., 768x768).</div>`;
                 return;
             }
-            
+
             btn.disabled = true;
             status.innerHTML = "Processing Magic...";
 
@@ -124,10 +125,10 @@
 
                 if (!res.ok) throw new Error(result.error || "Generation Failed");
 
-                status.innerHTML = "Stability AI is animating... (60s)";
+                status.innerHTML = "Stability is animating... (this takes ~60s)";
                 pollForResult(result.id);
             } catch (err) {
-                status.innerHTML = `<div class="error-box"><b>Error:</b> ${err.message}</div>`;
+                status.innerHTML = `<div class="error-msg"><b>Error:</b> ${err.message}</div>`;
                 btn.disabled = false;
             }
         };
@@ -137,15 +138,15 @@
         const status = document.getElementById('status');
         const interval = setInterval(async () => {
             const res = await fetch(`${WORKER_URL}/result?id=${id}`);
-            if (res.status === 202) return; // Still processing
+            if (res.status === 202) return; // Still working...
 
             if (res.ok) {
                 clearInterval(interval);
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
-                status.innerHTML = `<video controls width="100%" style="border-radius:12px;"><source src="${url}"></video>`;
+                status.innerHTML = `<video controls width="100%" style="border-radius:8px;"><source src="${url}"></video>`;
                 document.getElementById('genBtn').disabled = false;
-                fetchCredits(); // Refresh credit count
+                fetchCredits(); // Update balance
             }
         }, 10000);
     }
