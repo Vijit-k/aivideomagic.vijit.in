@@ -5,193 +5,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Video Magic</title>
     <style>
-        :root {
-            --bg-color: #0d1117;
-            --card-bg: #161b22;
-            --text-color: #c9d1d9;
-            --accent-color: #58a6ff;
-            --success-color: #238636;
-            --error-color: #da3633;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background-color: var(--card-bg);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            width: 100%;
-            max-width: 500px;
-        }
-        .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        h2 { color: var(--accent-color); margin: 0; }
-        .credit-badge {
-            background: #1f6feb;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 0.9em;
-        }
-        .input-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85em; text-transform: uppercase; opacity: 0.8; }
-        input[type="email"], input[type="file"], textarea {
-            width: 100%;
-            padding: 12px;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            color: white;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: var(--success-color);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:disabled { background-color: #21262d; cursor: not-allowed; }
+        :root { --bg: #0d1117; --card: #161b22; --blue: #58a6ff; --green: #238636; --red: #da3633; }
+        body { font-family: sans-serif; background: var(--bg); color: #c9d1d9; display: flex; justify-content: center; padding: 20px; }
+        .container { background: var(--card); padding: 30px; border-radius: 12px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .badge { background: #1f6feb; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85em; white-space: nowrap; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0 20px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: var(--green); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        button:disabled { background: #21262d; cursor: not-allowed; }
         #status { margin-top: 20px; text-align: center; font-size: 0.9em; }
-        .error-box { color: var(--error-color); padding: 10px; border: 1px solid var(--error-color); border-radius: 6px; margin-top: 10px; font-size: 0.8em; white-space: pre-wrap; }
+        .debug-log { font-family: monospace; font-size: 0.75em; color: #8b949e; margin-top: 15px; padding: 10px; background: #010409; border-radius: 4px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-row">
-        <h2>AI Video Magic</h2>
-        <div id="credit-count" class="credit-badge">CREDITS: --</div>
+    <div class="header">
+        <h2 style="color:var(--blue); margin:0;">AI Video Magic</h2>
+        <div id="credit-badge" class="badge">CREDITS: --</div>
     </div>
 
-    <div class="input-group">
-        <label>Account Email</label>
-        <input type="email" id="email" placeholder="Enter your email" onchange="fetchCredits()">
-    </div>
+    <label>ACCOUNT EMAIL</label>
+    <input type="email" id="email" placeholder="vijitkumar@gmail.com" oninput="fetchCredits()">
 
-    <div class="input-group">
-        <label>1. Upload Image (Multiples of 64)</label>
-        <input type="file" id="imageInput" accept="image/*">
-    </div>
+    <label>1. UPLOAD IMAGE</label>
+    <input type="file" id="imageInput" accept="image/*">
 
-    <div class="input-group">
-        <label>2. Motion Instructions</label>
-        <textarea id="prompt" rows="3" placeholder="e.g., mascot blinks and smiles"></textarea>
-    </div>
+    <label>2. MOTION INSTRUCTIONS</label>
+    <textarea id="prompt" rows="2" placeholder="e.g. Mascot blinks and smiles"></textarea>
 
-    <button id="generateBtn" onclick="generateVideo()">Generate Video</button>
+    <button id="genBtn" onclick="generateVideo()">Generate Video</button>
 
     <div id="status"></div>
-    <div id="error-details"></div>
+    <div id="debug" class="debug-log"></div>
 </div>
 
 <script>
-    const WORKER_URL = "https://your-worker-subdomain.workers.dev"; // Replace with your actual Worker URL
+    // 1. UPDATE THIS URL TO YOUR ACTUAL WORKER URL
+    const WORKER_URL = "https://your-worker-name.workers.dev"; 
+
+    function logDebug(msg) {
+        const d = document.getElementById('debug');
+        d.style.display = "block";
+        d.innerHTML += `> ${msg}<br>`;
+    }
 
     async function fetchCredits() {
         const email = document.getElementById('email').value;
-        if (!email) return;
+        const badge = document.getElementById('credit-badge');
+        if (!email.includes('@')) return;
 
         try {
-            const response = await fetch(`${WORKER_URL}?email=${encodeURIComponent(email)}`);
-            const data = await response.json();
-            // FIXED: Explicitly handle cases where user is not in database
-            document.getElementById('credit-count').innerText = `CREDITS: ${data.total_credits ?? 0}`;
+            const res = await fetch(`${WORKER_URL}?email=${encodeURIComponent(email)}`);
+            const data = await res.json();
+            
+            // Handle if Supabase returns an empty array or no data
+            const amount = (data && typeof data.total_credits !== 'undefined') ? data.total_credits : 0;
+            badge.innerText = `CREDITS: ${amount}`;
+            
+            if(amount === 0) logDebug(`No record found for ${email} in Supabase.`);
         } catch (err) {
-            document.getElementById('credit-count').innerText = "CREDITS: 0";
+            badge.innerText = "CREDITS: Error";
+            logDebug(`Fetch failed: ${err.message}`);
         }
     }
 
     async function generateVideo() {
         const email = document.getElementById('email').value;
-        const imageFile = document.getElementById('imageInput').files[0];
-        const statusDiv = document.getElementById('status');
-        const errorDiv = document.getElementById('error-details');
-        const btn = document.getElementById('generateBtn');
+        const image = document.getElementById('imageInput').files[0];
+        const status = document.getElementById('status');
+        const btn = document.getElementById('genBtn');
 
-        if (!email || !imageFile) {
-            alert("Please provide both email and an image.");
-            return;
-        }
+        if (!email || !image) return alert("Email and Image required!");
 
-        statusDiv.innerHTML = "Processing Magic...<br><small>STABILITY AI IS ANIMATING YOUR MASCOT...</small>";
-        errorDiv.innerHTML = "";
         btn.disabled = true;
-
-        const formData = new FormData();
-        formData.append("email", email);
-        formData.append("image", imageFile);
+        status.innerHTML = "Checking credits & sending to Stability AI...";
+        
+        const fd = new FormData();
+        fd.append("email", email);
+        fd.append("image", image);
 
         try {
-            const response = await fetch(WORKER_URL, {
-                method: "POST",
-                body: formData
-            });
+            const res = await fetch(WORKER_URL, { method: "POST", body: fd });
+            const result = await res.json();
 
-            const result = await response.json();
+            if (!res.ok) throw new Error(result.error + (result.details ? ": " + result.details : ""));
 
-            if (!response.ok) {
-                // FIXED: Better visibility for "Stability Refused" details
-                throw new Error(result.error + (result.details ? ": " + result.details : ""));
-            }
-
-            if (result.id) {
-                pollForResult(result.id);
-            }
+            status.innerHTML = "Cooking video... this takes ~60s.";
+            pollForResult(result.id);
         } catch (err) {
-            statusDiv.innerHTML = `<span style="color:#da3633">Error: Generation Failed</span>`;
-            errorDiv.innerHTML = `<div class="error-box">${err.message}</div>`;
+            status.innerHTML = `<span style="color:var(--red)">Failed: ${err.message}</span>`;
+            logDebug(`POST Error: ${err.message}`);
             btn.disabled = false;
         }
     }
 
     async function pollForResult(id) {
-        const statusDiv = document.getElementById('status');
-        
         const interval = setInterval(async () => {
-            try {
-                const res = await fetch(`${WORKER_URL}/result?id=${id}`);
-                
-                if (res.status === 202) {
-                    statusDiv.innerHTML = "Still Cooking... (Usually takes 60-90 seconds)";
-                    return;
-                }
+            const res = await fetch(`${WORKER_URL}/result?id=${id}`);
+            if (res.status === 202) return; // Still processing
 
-                if (res.ok) {
-                    clearInterval(interval);
-                    const videoBlob = await res.blob();
-                    const videoUrl = URL.createObjectURL(videoBlob);
-                    statusDiv.innerHTML = `
-                        <video controls width="100%" style="border-radius:8px; margin-top:10px;">
-                            <source src="${videoUrl}" type="video/mp4">
-                        </video>
-                        <br><a href="${videoUrl}" download="mascot.mp4" style="color:#58a6ff; text-decoration:none;">Download Video</a>
-                    `;
-                    document.getElementById('generateBtn').disabled = false;
-                    fetchCredits(); // Refresh credits after successful generation
-                }
-            } catch (err) {
+            if (res.ok) {
                 clearInterval(interval);
-                statusDiv.innerHTML = "Polling Error. Please check back later.";
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                document.getElementById('status').innerHTML = `<video controls width="100%"><source src="${url}"></video>`;
+                document.getElementById('genBtn').disabled = false;
+                fetchCredits();
             }
         }, 10000);
     }
 </script>
-
 </body>
 </html>
