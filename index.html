@@ -14,11 +14,10 @@
         .input-group { margin-bottom: 18px; }
         label { display: block; font-size: 0.7rem; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 6px; }
         input, textarea { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; color: white; font-size: 0.9rem; box-sizing: border-box; }
-        button { width: 100%; padding: 14px; background: var(--green); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
-        #status { margin-top: 20px; }
-        .error-msg { background: rgba(218, 54, 51, 0.1); border: 1px solid var(--red); color: #ff7b72; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-top: 10px; }
-        .raw-debug { background: #010409; border: 1px dashed var(--border); padding: 10px; font-family: monospace; font-size: 0.75rem; color: #7ee787; margin-top: 15px; overflow-x: auto; }
+        button { width: 100%; padding: 14px; background: var(--green); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #status { margin-top: 20px; text-align: center; font-size: 0.85rem; }
+        .debug-panel { background: #010409; border: 1px dashed var(--border); padding: 10px; font-family: monospace; font-size: 0.7rem; color: #7ee787; margin-top: 15px; overflow-x: auto; }
     </style>
 </head>
 <body>
@@ -35,118 +34,116 @@
     </div>
 
     <div class="input-group">
-        <label>1. Upload Image (Multiples of 64)</label>
+        <label>1. Upload Image</label>
         <input type="file" id="imageInput" accept="image/*">
-        <small style="font-size:0.7rem; color:#8b949e;">Req: 768x768, 1024x576, etc.</small>
+        <small style="font-size:0.65rem; color:#8b949e;">Any size allowed - we auto-resize for you.</small>
     </div>
 
     <div class="input-group">
         <label>2. Motion Instructions</label>
-        <textarea id="prompt" rows="2" placeholder="e.g., mascot blinks and smiles"></textarea>
+        <textarea id="prompt" rows="2" placeholder="e.g. Cinematic slow zoom into the mascot"></textarea>
     </div>
 
     <button id="genBtn" onclick="processMagic()">Generate Video</button>
 
     <div id="status"></div>
-    <div id="debugBox" class="raw-debug" style="display:none;"></div>
+    <div id="debug" class="debug-panel" style="display:none;"></div>
 </div>
 
 <script>
-    // --- CHANGE THIS TO YOUR WORKER URL ---
-    const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev/"; 
-    
+    const WORKER_URL = "YOUR_CLOUDFLARE_WORKER_URL"; 
     let timer;
 
-    // Fetches credits after you stop typing for 600ms
     function debounceFetch() {
         clearTimeout(timer);
         timer = setTimeout(fetchCredits, 600);
     }
 
     async function fetchCredits() {
-        const email = document.getElementById('email').value.trim();
+        const email = document.getElementById('email').value.trim().toLowerCase();
         const badge = document.getElementById('badge');
-        const debugBox = document.getElementById('debugBox');
-        
+        const debug = document.getElementById('debug');
         if (!email.includes('@')) return;
 
         try {
-            // Added a timestamp to prevent browser caching issues
-            const res = await fetch(`${WORKER_URL}?email=${encodeURIComponent(email)}&t=${Date.now()}`);
-            
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            
+            const res = await fetch(`${WORKER_URL}?email=${encodeURIComponent(email)}`);
             const data = await res.json();
-            
-            // SHOW RAW DATA FOR DEBUGGING
-            debugBox.style.display = "block";
-            debugBox.innerText = `Raw Data: ${JSON.stringify(data)}`;
+            debug.style.display = "block";
+            debug.innerText = `DB Response: ${JSON.stringify(data)}`;
 
-            // Handle both Array and Object responses from the Worker
+            // Standardize credit reading from Supabase
             const record = Array.isArray(data) ? data[0] : data;
             const balance = (record && record.total_credits !== undefined) ? record.total_credits : 0;
-            
             badge.innerText = `CREDITS: ${balance}`;
         } catch (err) {
             badge.innerText = "CREDITS: Error";
-            debugBox.style.display = "block";
-            debugBox.innerText = `Fetch Error: ${err.message}. Check Worker CORS settings.`;
+            debug.innerText = `Fetch Error: ${err.message}`;
         }
     }
 
+    // NEW: Auto-Resizer to solve "Stability Refused"
+    async function smartResize(file) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                // Snap to nearest multiple of 64
+                canvas.width = Math.round(img.width / 64) * 64;
+                canvas.height = Math.round(img.height / 64) * 64;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob((blob) => resolve(blob), 'image/png');
+            };
+        });
+    }
+
     async function processMagic() {
-        const email = document.getElementById('email').value.trim();
+        const email = document.getElementById('email').value.trim().toLowerCase();
         const imageFile = document.getElementById('imageInput').files[0];
         const status = document.getElementById('status');
         const btn = document.getElementById('genBtn');
 
-        if (!email || !imageFile) return alert("Please provide email and image.");
+        if (!email || !imageFile) return alert("Email and Image are required.");
 
-        // PRE-FLIGHT IMAGE CHECK
-        const img = new Image();
-        img.src = URL.createObjectURL(imageFile);
-        img.onload = async () => {
-            if (img.width % 64 !== 0 || img.height % 64 !== 0) {
-                status.innerHTML = `<div class="error-msg"><b>Refused:</b> Image is ${img.width}x${img.height}. Both width and height must be multiples of 64 (e.g., 768x768).</div>`;
-                return;
-            }
+        btn.disabled = true;
+        status.innerHTML = "<b>Optimizing Image...</b>";
 
-            btn.disabled = true;
-            status.innerHTML = "Processing Magic...";
-
+        try {
+            // Resize image before sending
+            const optimizedImage = await smartResize(imageFile);
+            
+            status.innerHTML = "<b>Step 1/2: Uploading...</b>";
             const fd = new FormData();
             fd.append("email", email);
-            fd.append("image", imageFile);
+            fd.append("image", optimizedImage);
             fd.append("prompt", document.getElementById('prompt').value);
 
-            try {
-                const res = await fetch(WORKER_URL, { method: "POST", body: fd });
-                const result = await res.json();
+            const res = await fetch(WORKER_URL, { method: "POST", body: fd });
+            const result = await res.json();
 
-                if (!res.ok) throw new Error(result.error || "Generation Failed");
+            if (!res.ok) throw new Error(result.error || "Generation Failed");
 
-                status.innerHTML = "Stability is animating... (this takes ~60s)";
-                pollForResult(result.id);
-            } catch (err) {
-                status.innerHTML = `<div class="error-msg"><b>Error:</b> ${err.message}</div>`;
-                btn.disabled = false;
-            }
-        };
+            status.innerHTML = "<b>Step 2/2: Stability is animating... (60s)</b>";
+            pollForResult(result.id);
+        } catch (err) {
+            status.innerHTML = `<span style="color:var(--red)">${err.message}</span>`;
+            btn.disabled = false;
+        }
     }
 
     async function pollForResult(id) {
         const status = document.getElementById('status');
         const interval = setInterval(async () => {
             const res = await fetch(`${WORKER_URL}/result?id=${id}`);
-            if (res.status === 202) return; // Still working...
-
+            if (res.status === 202) return;
             if (res.ok) {
                 clearInterval(interval);
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
                 status.innerHTML = `<video controls width="100%" style="border-radius:8px;"><source src="${url}"></video>`;
                 document.getElementById('genBtn').disabled = false;
-                fetchCredits(); // Update balance
+                fetchCredits();
             }
         }, 10000);
     }
