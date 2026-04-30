@@ -3,46 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Video Magic | Vijit</title>
+    <title>AI Video Magic</title>
     <style>
         :root { --bg: #0d1117; --card: #161b22; --blue: #58a6ff; --green: #238636; --border: #30363d; }
         body { font-family: sans-serif; background: var(--bg); color: #c9d1d9; display: flex; justify-content: center; padding: 40px 20px; }
-        .container { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 450px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h2 { color: var(--blue); margin: 0; font-size: 1.5rem; }
-        .badge { background: #1f6feb; color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 0.8rem; color: #8b949e; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: var(--green); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        #status { margin-top: 15px; text-align: center; font-size: 0.9rem; font-weight: bold; }
+        .container { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 440px; }
+        .badge { background: #1f6feb; color: white; padding: 5px 12px; border-radius: 20px; float: right; font-weight: bold; font-size: 0.85rem; }
+        input, textarea { width: 100%; padding: 12px; margin: 10px 0; background: #0d1117; border: 1px solid var(--border); color: white; box-sizing: border-box; border-radius: 6px; }
+        button { width: 100%; padding: 15px; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        #status { margin-top: 15px; text-align: center; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h2>AI Video Magic</h2>
-        <div id="badge" class="badge">CREDITS: --</div>
-    </div>
+    <div id="badge" class="badge">CREDITS: --</div>
+    <h2 style="color: var(--blue);">AI Video Magic</h2>
 
-    <div class="input-group">
-        <label>Account Email</label>
-        <input type="email" id="email" placeholder="yourname@gmail.com" oninput="fetchCredits()">
-    </div>
+    <label>Email</label>
+    <input type="email" id="email" placeholder="your@email.com" oninput="fetchCredits()">
 
-    <div class="input-group">
-        <label>1. Upload Image</label>
-        <input type="file" id="imageInput" accept="image/*">
-        <p style="font-size: 0.7rem; color: #8b949e;">Any size allowed - we auto-resize for you.</p>
-    </div>
+    <label>1. Upload Image</label>
+    <input type="file" id="imageInput" accept="image/*">
+    <p style="font-size: 0.7rem; color: #8b949e;">Auto-resizing enabled.</p>
 
-    <div class="input-group">
-        <label>2. Motion Instructions</label>
-        <textarea id="prompt" rows="3" placeholder="e.g., mascot blinks and smiles"></textarea>
-    </div>
+    <label>2. Motion Instructions</label>
+    <textarea id="prompt" placeholder="e.g. mascot blinks and smiles"></textarea>
 
-    <button id="genBtn" onclick="processMagic()">Generate Video</button>
+    <button id="genBtn" onclick="startGeneration()">Generate Video</button>
     <div id="status"></div>
 </div>
 
@@ -59,7 +47,7 @@
         } catch (e) { document.getElementById('badge').innerText = "CREDITS: Error"; }
     }
 
-    async function smartResize(file) {
+    async function autoResize(file) {
         return new Promise((resolve) => {
             const img = new Image();
             img.src = URL.createObjectURL(file);
@@ -74,40 +62,32 @@
         });
     }
 
-    async function processMagic() {
+    async function startGeneration() {
         const email = document.getElementById('email').value.trim().toLowerCase();
         const file = document.getElementById('imageInput').files[0];
         const status = document.getElementById('status');
-        const btn = document.getElementById('genBtn');
+        if (!file || !email) return alert("Email and Image required");
 
-        if (!email || !file) return alert("Email and Image required");
-
-        btn.disabled = true;
         status.style.color = "var(--blue)";
-        status.innerText = "Optimizing Image...";
+        status.innerText = "Step 1: Optimizing Dimensions...";
+        const optimizedImage = await autoResize(file);
+
+        status.innerText = "Step 2: Sending to Stability AI...";
+        const fd = new FormData();
+        fd.append("image", optimizedImage);
+        fd.append("email", email);
+        fd.append("prompt", document.getElementById('prompt').value);
 
         try {
-            const optimizedBlob = await smartResize(file);
-            status.innerText = "Sending to Stability AI...";
-
-            const fd = new FormData();
-            fd.append("image", optimizedBlob);
-            fd.append("prompt", document.getElementById('prompt').value);
-            // We append email to send to the Worker, but the Worker will strip it before Stability
-            fd.append("email", email);
-
             const res = await fetch(WORKER_URL, { method: "POST", body: fd });
             const result = await res.json();
-
             if (!res.ok) throw new Error(result.error || "Handshake Failed");
-
+            
             status.style.color = "var(--green)";
-            status.innerHTML = `Success! Video ID: ${result.id}<br><span style="font-size:0.8rem; color:#8b949e">Rendering takes ~60s</span>`;
+            status.innerHTML = `SUCCESS! Video ID: ${result.id}<br>Processing... (~60s)`;
         } catch (err) {
             status.style.color = "red";
             status.innerText = "Error: " + err.message;
-        } finally {
-            btn.disabled = false;
         }
     }
 </script>
