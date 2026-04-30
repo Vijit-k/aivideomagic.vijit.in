@@ -1,90 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><title>AI Video Magic</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Magic | Nuantra</title>
     <style>
-        :root { --bg: #0d1117; --card: #161b22; --blue: #58a6ff; --green: #238636; --border: #30363d; }
-        body { font-family: sans-serif; background: var(--bg); color: #c9d1d9; display: flex; justify-content: center; padding-top: 50px; }
-        .container { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 440px; }
-        .badge { background: #1f6feb; color: white; padding: 4px 12px; border-radius: 15px; float: right; font-size: 0.8rem; }
-        input, textarea { width: 100%; padding: 10px; margin: 10px 0; background: #0d1117; border: 1px solid var(--border); color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 14px; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        :root { 
+            --bg: #0d1117; 
+            --card: #161b22; 
+            --blue: #58a6ff; 
+            --green: #238636; 
+            --red: #da3633; 
+            --border: #30363d; 
+            --text: #c9d1d9;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+            padding: 40px 20px; 
+            margin: 0; 
+        }
+        .container { 
+            background: var(--card); 
+            padding: 32px; 
+            border-radius: 16px; 
+            width: 100%; 
+            max-width: 480px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 25px; 
+        }
+        h2 { color: var(--blue); margin: 0; font-size: 1.5rem; }
+        .badge { 
+            background: #1f6feb; 
+            color: white; 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            font-size: 0.85rem; 
+        }
+        .input-group { margin-bottom: 20px; }
+        label { 
+            display: block; 
+            font-size: 0.75rem; 
+            font-weight: 700; 
+            color: #8b949e; 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+        }
+        input[type="email"], textarea { 
+            width: 100%; 
+            padding: 12px; 
+            background: #0d1117; 
+            border: 1px solid var(--border); 
+            border-radius: 6px; 
+            color: white; 
+            font-size: 1rem; 
+            box-sizing: border-box; 
+        }
+        input[type="file"] { color: #8b949e; font-size: 0.9rem; }
+        button { 
+            width: 100%; 
+            padding: 16px; 
+            background-color: var(--green); 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            font-size: 1rem;
+            cursor: pointer; 
+            transition: background 0.2s; 
+        }
+        button:hover { background-color: #2ea043; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #status { 
+            margin-top: 20px; 
+            text-align: center; 
+            font-size: 0.9rem; 
+            min-height: 24px;
+        }
+        .info-text { font-size: 0.75rem; color: #8b949e; margin-top: 4px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="badge" class="badge">CREDITS: --</div>
-    <h2 style="color: var(--blue);">AI Video Magic</h2>
+    <div class="header">
+        <h2>AI Video Magic</h2>
+        <div id="badge" class="badge">CREDITS: --</div>
+    </div>
 
-    <label>Email</label>
-    <input type="email" id="email" placeholder="your@email.com" oninput="fetchCredits()">
+    <div class="input-group">
+        <label for="email">Account Email</label>
+        <input type="email" id="email" placeholder="vijitkumar@gmail.com" oninput="debounceFetch()">
+    </div>
 
-    <label>1. Upload Image</label>
-    <input type="file" id="imageInput" accept="image/*">
-    <p style="font-size: 0.7rem; color: #8b949e; margin-top: -5px;">Any size allowed - we auto-resize for you.</p>
+    <div class="input-group">
+        <label for="imageInput">1. Upload Image</label>
+        <input type="file" id="imageInput" accept="image/*">
+        <p class="info-text">Any size allowed - we auto-resize for you.</p>
+    </div>
 
-    <label>2. Motion Instructions</label>
-    <textarea id="prompt" rows="3" placeholder="e.g. Cinematic slow zoom into the mascot"></textarea>
+    <div class="input-group">
+        <label for="prompt">2. Motion Instructions</label>
+        <textarea id="prompt" rows="3" placeholder="e.g., mascot blinks and smiles"></textarea>
+    </div>
 
-    <button id="genBtn" onclick="startGeneration()">Generate Video</button>
-    <div id="status" style="margin-top: 15px; font-size: 0.9rem; text-align: center; color: #8b949e;"></div>
+    <button id="genBtn" onclick="processMagic()">Generate Video</button>
+
+    <div id="status"></div>
 </div>
 
 <script>
-    const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev"; //
+    //
+    const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev"; 
+    let timer;
 
-    async function fetchCredits() {
-        const email = document.getElementById('email').value.trim().toLowerCase();
-        if (!email.includes('@')) return;
-        try {
-            const res = await fetch(`${WORKER_URL}?email=${email}`);
-            const data = await res.json();
-            // Shows your 20 credits from the DB
-            document.getElementById('badge').innerText = `CREDITS: ${data.total_credits ?? 0}`;
-        } catch (e) { document.getElementById('badge').innerText = "CREDITS: Error"; }
+    // Fetch credits automatically when user stops typing email
+    function debounceFetch() {
+        clearTimeout(timer);
+        timer = setTimeout(fetchCredits, 600);
     }
 
-    // Solves the "multiples of 64" restriction for customers
-    async function autoResize(file) {
+    async function fetchCredits() {
+        const emailInput = document.getElementById('email').value.trim().toLowerCase();
+        const badge = document.getElementById('badge');
+        
+        if (!emailInput.includes('@')) return;
+
+        try {
+            const res = await fetch(`${WORKER_URL}?email=${encodeURIComponent(emailInput)}`);
+            const data = await res.json();
+            
+            // Successfully link to your 20 credits
+            if (data.total_credits !== undefined) {
+                badge.innerText = `CREDITS: ${data.total_credits}`;
+                badge.style.backgroundColor = "#1f6feb";
+            } else {
+                badge.innerText = "CREDITS: 0";
+            }
+        } catch (err) {
+            badge.innerText = "CREDITS: Error";
+            badge.style.backgroundColor = "#da3633";
+        }
+    }
+
+    // Auto-resizer to fix "multiples of 64" error
+    async function smartResize(file) {
         return new Promise((resolve) => {
             const img = new Image();
             img.src = URL.createObjectURL(file);
             img.onload = () => {
                 const canvas = document.createElement('canvas');
+                // Calculate nearest multiple of 64
                 canvas.width = Math.round(img.width / 64) * 64;
                 canvas.height = Math.round(img.height / 64) * 64;
+                
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob((blob) => resolve(blob), 'image/png');
+                
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/png');
             };
         });
     }
 
-    async function startGeneration() {
+    async function processMagic() {
         const email = document.getElementById('email').value.trim().toLowerCase();
-        const file = document.getElementById('imageInput').files[0];
+        const imageFile = document.getElementById('imageInput').files[0];
+        const prompt = document.getElementById('prompt').value;
         const status = document.getElementById('status');
-        if (!file || !email) return alert("Email and Image required");
+        const btn = document.getElementById('genBtn');
 
-        status.innerText = "Optimizing Image Dimensions...";
-        const optimizedImage = await autoResize(file);
+        if (!email || !imageFile) {
+            alert("Please provide both an email and an image.");
+            return;
+        }
 
-        status.innerText = "Connecting to Stability AI...";
-        const fd = new FormData();
-        fd.append("image", optimizedImage);
-        fd.append("email", email);
-        fd.append("prompt", document.getElementById('prompt').value);
+        btn.disabled = true;
+        status.innerHTML = "<span style='color:var(--blue)'><b>Step 1/2: Optimizing Image...</b></span>";
 
         try {
-            const res = await fetch(WORKER_URL, { method: "POST", body: fd });
+            // 1. Resize image silently
+            const optimizedImage = await smartResize(imageFile);
+            
+            status.innerHTML = "<span style='color:var(--blue)'><b>Step 2/2: Sending to Stability AI...</b></span>";
+            
+            const fd = new FormData();
+            fd.append("email", email);
+            fd.append("image", optimizedImage);
+            fd.append("prompt", prompt);
+
+            const res = await fetch(WORKER_URL, { 
+                method: "POST", 
+                body: fd 
+            });
+
             const result = await res.json();
-            if (!res.ok) throw new Error(result.error || "Check Console");
-            status.innerHTML = `<span style="color:var(--blue)">Video ID: ${result.id}<br>Processing... check back in 60s.</span>`;
+
+            if (!res.ok) {
+                throw new Error(result.error || "Connection Lost");
+            }
+
+            // - Success feedback
+            status.innerHTML = `
+                <div style="color:var(--green); font-weight:bold;">Video Initialized!</div>
+                <div style="font-size:0.8rem; margin-top:5px;">ID: ${result.id}</div>
+                <div style="color:#8b949e; font-size:0.8rem;">Processing usually takes 60-90 seconds.</div>
+            `;
+
         } catch (err) {
-            status.innerHTML = `<span style="color:red">Error: ${err.message}</span>`;
+            status.innerHTML = `<span style="color:var(--red)"><b>Error:</b> ${err.message}</span>`;
+        } finally {
+            btn.disabled = false;
         }
     }
 </script>
+
 </body>
 </html>
