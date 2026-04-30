@@ -3,91 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Video Magic | Nuantra</title>
+    <title>AI Video Magic | Vijit</title>
     <style>
-        :root { 
-            --bg: #0d1117; 
-            --card: #161b22; 
-            --blue: #58a6ff; 
-            --green: #238636; 
-            --red: #da3633; 
-            --border: #30363d; 
-            --text: #c9d1d9;
-        }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; 
-            background-color: var(--bg); 
-            color: var(--text); 
-            display: flex; 
-            justify-content: center; 
-            padding: 40px 20px; 
-            margin: 0; 
-        }
-        .container { 
-            background: var(--card); 
-            padding: 32px; 
-            border-radius: 16px; 
-            width: 100%; 
-            max-width: 480px; 
-            border: 1px solid var(--border); 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-        }
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 25px; 
-        }
+        :root { --bg: #0d1117; --card: #161b22; --blue: #58a6ff; --green: #238636; --border: #30363d; }
+        body { font-family: sans-serif; background: var(--bg); color: #c9d1d9; display: flex; justify-content: center; padding: 40px 20px; }
+        .container { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 450px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         h2 { color: var(--blue); margin: 0; font-size: 1.5rem; }
-        .badge { 
-            background: #1f6feb; 
-            color: white; 
-            padding: 6px 14px; 
-            border-radius: 20px; 
-            font-weight: bold; 
-            font-size: 0.85rem; 
-        }
-        .input-group { margin-bottom: 20px; }
-        label { 
-            display: block; 
-            font-size: 0.75rem; 
-            font-weight: 700; 
-            color: #8b949e; 
-            text-transform: uppercase; 
-            margin-bottom: 8px; 
-        }
-        input[type="email"], textarea { 
-            width: 100%; 
-            padding: 12px; 
-            background: #0d1117; 
-            border: 1px solid var(--border); 
-            border-radius: 6px; 
-            color: white; 
-            font-size: 1rem; 
-            box-sizing: border-box; 
-        }
-        input[type="file"] { color: #8b949e; font-size: 0.9rem; }
-        button { 
-            width: 100%; 
-            padding: 16px; 
-            background-color: var(--green); 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            font-size: 1rem;
-            cursor: pointer; 
-            transition: background 0.2s; 
-        }
-        button:hover { background-color: #2ea043; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        #status { 
-            margin-top: 20px; 
-            text-align: center; 
-            font-size: 0.9rem; 
-            min-height: 24px;
-        }
-        .info-text { font-size: 0.75rem; color: #8b949e; margin-top: 4px; }
+        .badge { background: #1f6feb; color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.8rem; color: #8b949e; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: var(--green); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #status { margin-top: 15px; text-align: center; font-size: 0.9rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -99,132 +27,89 @@
     </div>
 
     <div class="input-group">
-        <label for="email">Account Email</label>
-        <input type="email" id="email" placeholder="vijitkumar@gmail.com" oninput="debounceFetch()">
+        <label>Account Email</label>
+        <input type="email" id="email" placeholder="yourname@gmail.com" oninput="fetchCredits()">
     </div>
 
     <div class="input-group">
-        <label for="imageInput">1. Upload Image</label>
+        <label>1. Upload Image</label>
         <input type="file" id="imageInput" accept="image/*">
-        <p class="info-text">Any size allowed - we auto-resize for you.</p>
+        <p style="font-size: 0.7rem; color: #8b949e;">Any size allowed - we auto-resize for you.</p>
     </div>
 
     <div class="input-group">
-        <label for="prompt">2. Motion Instructions</label>
+        <label>2. Motion Instructions</label>
         <textarea id="prompt" rows="3" placeholder="e.g., mascot blinks and smiles"></textarea>
     </div>
 
     <button id="genBtn" onclick="processMagic()">Generate Video</button>
-
     <div id="status"></div>
 </div>
 
 <script>
-    //
-    const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev"; 
-    let timer;
-
-    // Fetch credits automatically when user stops typing email
-    function debounceFetch() {
-        clearTimeout(timer);
-        timer = setTimeout(fetchCredits, 600);
-    }
+    const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev";
 
     async function fetchCredits() {
-        const emailInput = document.getElementById('email').value.trim().toLowerCase();
-        const badge = document.getElementById('badge');
-        
-        if (!emailInput.includes('@')) return;
-
+        const email = document.getElementById('email').value.trim().toLowerCase();
+        if (!email.includes('@')) return;
         try {
-            const res = await fetch(`${WORKER_URL}?email=${encodeURIComponent(emailInput)}`);
+            const res = await fetch(`${WORKER_URL}?email=${email}`);
             const data = await res.json();
-            
-            // Successfully link to your 20 credits
-            if (data.total_credits !== undefined) {
-                badge.innerText = `CREDITS: ${data.total_credits}`;
-                badge.style.backgroundColor = "#1f6feb";
-            } else {
-                badge.innerText = "CREDITS: 0";
-            }
-        } catch (err) {
-            badge.innerText = "CREDITS: Error";
-            badge.style.backgroundColor = "#da3633";
-        }
+            document.getElementById('badge').innerText = `CREDITS: ${data.total_credits ?? 0}`;
+        } catch (e) { document.getElementById('badge').innerText = "CREDITS: Error"; }
     }
 
-    // Auto-resizer to fix "multiples of 64" error
     async function smartResize(file) {
         return new Promise((resolve) => {
             const img = new Image();
             img.src = URL.createObjectURL(file);
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Calculate nearest multiple of 64
                 canvas.width = Math.round(img.width / 64) * 64;
                 canvas.height = Math.round(img.height / 64) * 64;
-                
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                canvas.toBlob((blob) => {
-                    resolve(blob);
-                }, 'image/png');
+                canvas.toBlob((blob) => resolve(blob), 'image/png');
             };
         });
     }
 
     async function processMagic() {
         const email = document.getElementById('email').value.trim().toLowerCase();
-        const imageFile = document.getElementById('imageInput').files[0];
-        const prompt = document.getElementById('prompt').value;
+        const file = document.getElementById('imageInput').files[0];
         const status = document.getElementById('status');
         const btn = document.getElementById('genBtn');
 
-        if (!email || !imageFile) {
-            alert("Please provide both an email and an image.");
-            return;
-        }
+        if (!email || !file) return alert("Email and Image required");
 
         btn.disabled = true;
-        status.innerHTML = "<span style='color:var(--blue)'><b>Step 1/2: Optimizing Image...</b></span>";
+        status.style.color = "var(--blue)";
+        status.innerText = "Optimizing Image...";
 
         try {
-            // 1. Resize image silently
-            const optimizedImage = await smartResize(imageFile);
-            
-            status.innerHTML = "<span style='color:var(--blue)'><b>Step 2/2: Sending to Stability AI...</b></span>";
-            
+            const optimizedBlob = await smartResize(file);
+            status.innerText = "Sending to Stability AI...";
+
             const fd = new FormData();
+            fd.append("image", optimizedBlob);
+            fd.append("prompt", document.getElementById('prompt').value);
+            // We append email to send to the Worker, but the Worker will strip it before Stability
             fd.append("email", email);
-            fd.append("image", optimizedImage);
-            fd.append("prompt", prompt);
 
-            const res = await fetch(WORKER_URL, { 
-                method: "POST", 
-                body: fd 
-            });
-
+            const res = await fetch(WORKER_URL, { method: "POST", body: fd });
             const result = await res.json();
 
-            if (!res.ok) {
-                throw new Error(result.error || "Connection Lost");
-            }
+            if (!res.ok) throw new Error(result.error || "Handshake Failed");
 
-            // - Success feedback
-            status.innerHTML = `
-                <div style="color:var(--green); font-weight:bold;">Video Initialized!</div>
-                <div style="font-size:0.8rem; margin-top:5px;">ID: ${result.id}</div>
-                <div style="color:#8b949e; font-size:0.8rem;">Processing usually takes 60-90 seconds.</div>
-            `;
-
+            status.style.color = "var(--green)";
+            status.innerHTML = `Success! Video ID: ${result.id}<br><span style="font-size:0.8rem; color:#8b949e">Rendering takes ~60s</span>`;
         } catch (err) {
-            status.innerHTML = `<span style="color:var(--red)"><b>Error:</b> ${err.message}</span>`;
+            status.style.color = "red";
+            status.innerText = "Error: " + err.message;
         } finally {
             btn.disabled = false;
         }
     }
 </script>
-
 </body>
 </html>
