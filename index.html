@@ -2,135 +2,142 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI Video Magic | Pro</title>
+    <title>AI Video Magic | Nuantra Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
-        :root { --bg: #050505; --card: #121212; --blue: #3d91ff; --green: #00c853; --border: #282828; }
+        :root { --bg: #050505; --card: #121212; --blue: #3d91ff; --green: #00c853; --border: #282828; --text-dim: #888; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; display: flex; flex-direction: column; align-items: center; padding: 50px 20px; }
-        .glass-container { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 40px; width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .credit-badge { background: rgba(61, 145, 255, 0.1); color: var(--blue); border: 1px solid var(--blue); padding: 5px 15px; border-radius: 30px; font-weight: bold; }
-        h1 { font-size: 24px; margin-bottom: 30px; background: linear-gradient(to right, #3d91ff, #913dff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        input, button { width: 100%; padding: 15px; margin-bottom: 20px; border-radius: 10px; border: 1px solid var(--border); background: #1a1a1a; color: #fff; font-size: 16px; }
-        .btn-generate { background: var(--green); border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,200,83,0.3); }
-        .pricing-section { display: flex; gap: 15px; margin-top: 20px; }
-        .price-card { flex: 1; background: #1a1a1a; border: 1px solid var(--border); padding: 20px; border-radius: 15px; text-align: center; cursor: pointer; }
-        .price-card:hover { border-color: var(--blue); }
+        .glass-container { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; width: 100%; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+        .credit-badge { background: rgba(61, 145, 255, 0.1); color: var(--blue); border: 1px solid var(--blue); padding: 6px 18px; border-radius: 30px; font-weight: bold; font-size: 14px; }
+        h1 { font-size: 28px; margin: 0; background: linear-gradient(90deg, #3d91ff, #913dff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        label { display: block; font-size: 12px; color: var(--text-dim); text-transform: uppercase; margin: 20px 0 8px; font-weight: bold; }
+        input, textarea, button { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border); background: #1a1a1a; color: #fff; font-size: 16px; box-sizing: border-box; }
+        input:focus, textarea:focus { border-color: var(--blue); outline: none; }
+        .btn-generate { background: var(--green); border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,200,83,0.3); }
+        .pricing-section { display: flex; gap: 15px; margin-top: 30px; width: 100%; max-width: 500px; }
+        .price-card { flex: 1; background: #1a1a1a; border: 1px solid var(--border); padding: 25px; border-radius: 20px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .price-card:hover { border-color: var(--blue); background: #1f1f1f; }
+        #status { margin-top: 20px; text-align: center; font-size: 14px; min-height: 20px; }
     </style>
 </head>
 <body>
 
 <div class="glass-container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h1>AI Video Magic</h1>
-        <div id="badge" class="credit-badge">CREDITS: 0</div>
+        <div id="badge" class="credit-badge">CREDITS: --</div>
     </div>
+    <p style="color: var(--text-dim); font-size: 14px; margin-bottom: 30px;">Create cinematic motion from any image.</p>
 
-    <input type="email" id="email" placeholder="Your account email" oninput="fetchCredits()">
+    <label>Account Email</label>
+    <input type="email" id="email" placeholder="vijitkumar@gmail.com" oninput="fetchCredits()">
+
+    <label>Step 1: Upload Source Image</label>
     <input type="file" id="imageInput" accept="image/*">
-    <button class="btn-generate" onclick="generateVideo()">GENERATE VIDEO</button>
-    
-    <div id="status" style="text-align: center; font-size: 14px;"></div>
 
-    <div class="pricing-section">
-        <div class="price-card" onclick="startPay(500, 50)">
-            <div style="color: var(--blue); font-weight: bold;">Starter</div>
-            <div style="font-size: 20px; margin: 10px 0;">₹500</div>
-            <div style="font-size: 12px; color: #888;">50 Credits</div>
-        </div>
-        <div class="price-card" onclick="startPay(1000, 125)">
-            <div style="color: var(--blue); font-weight: bold;">Pro</div>
-            <div style="font-size: 20px; margin: 10px 0;">₹1000</div>
-            <div style="font-size: 12px; color: #888;">125 Credits</div>
-        </div>
+    <label>Step 2: Motion Prompt</label>
+    <textarea id="prompt" rows="2" placeholder="Describe the movement (e.g., 'gentle snow falling' or 'camera panning right')"></textarea>
+
+    <button class="btn-generate" onclick="generateMagic()">GENERATE MAGIC</button>
+    <div id="status"></div>
+</div>
+
+<div class="pricing-section">
+    <div class="price-card" onclick="startPay(500, 50)">
+        <div style="color: var(--blue); font-weight: bold;">Starter</div>
+        <div style="font-size: 24px; margin: 10px 0;">₹500</div>
+        <div style="font-size: 13px; color: var(--text-dim);">50 Generations</div>
+    </div>
+    <div class="price-card" onclick="startPay(1000, 125)" style="border-color: #913dff;">
+        <div style="color: #913dff; font-weight: bold;">Pro</div>
+        <div style="font-size: 24px; margin: 10px 0;">₹1000</div>
+        <div style="font-size: 13px; color: var(--text-dim);">125 Generations</div>
     </div>
 </div>
 
 <script>
-    const WORKER = "https://stability-bridge.vijitkumar.workers.dev";
+    // --- CONFIGURATION ---
+    const SB_URL = "YOUR_SUPABASE_URL";
+    const SB_KEY = "YOUR_SUPABASE_ANON_KEY";
+    const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev";
+    
+    const supabase = lib.supabase.createClient(SB_URL, SB_KEY);
 
-    // 1. CREDIT FETCHING (Works with your Badge)
     async function fetchCredits() {
         const email = document.getElementById('email').value.trim().toLowerCase();
         if(!email.includes('@')) return;
         try {
-            const res = await fetch(`${WORKER}?email=${email}`);
+            const res = await fetch(`${WORKER_URL}?email=${email}`);
             const data = await res.json();
             document.getElementById('badge').innerText = `CREDITS: ${data.total_credits || 0}`;
-        } catch (e) { console.error("Sync failed"); }
+        } catch (e) { console.error("Credit sync failed"); }
     }
 
-    // 2. THE IMAGE RESIZER (Prevents Stability Dimension Errors)
-    async function resizeImage(file) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.src = URL.createObjectURL(file);
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = Math.round(img.width / 64) * 64;
-                canvas.height = Math.round(img.height / 64) * 64;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob((blob) => resolve(blob), 'image/png');
-            };
-        });
-    }
-
-    // 3. THE GENERATION FIX (Prevents 404 & JSON Errors)
-    async function generateVideo() {
-        const email = document.getElementById('email').value.trim().toLowerCase();
+    async function generateMagic() {
+        const email = document.getElementById('email').value.trim();
         const file = document.getElementById('imageInput').files[0];
+        const prompt = document.getElementById('prompt').value;
         const status = document.getElementById('status');
-        
-        if(!file || !email) return alert("Please provide email and image.");
 
-        status.innerText = "Step 1/2: Optimizing Image...";
-        status.style.color = "#3d91ff";
+        if(!file || !email) return alert("Email and Image are mandatory.");
+
+        status.style.color = var(--blue);
+        status.innerText = "Step 1/3: Securely uploading image...";
 
         try {
-            const optimizedBlob = await resizeImage(file);
-            status.innerText = "Step 2/2: Initiating AI Render...";
+            // 1. UPLOAD TO SUPABASE
+            const fileName = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+            const { data, error } = await supabase.storage
+                .from('nuantra')
+                .upload(fileName, file);
 
-            const fd = new FormData();
-            fd.append("image", optimizedBlob);
+            if (error) throw new Error("Upload failed: " + error.message);
 
-            // PASS EMAIL IN URL TO KEEP BODY CLEAN FOR STABILITY
-            const res = await fetch(`${WORKER}?email=${email}`, { 
-                method: "POST", 
-                body: fd 
+            // 2. GET PUBLIC LINK
+            const { data: { publicUrl } } = supabase.storage
+                .from('nuantra')
+                .getPublicUrl(fileName);
+
+            status.innerText = "Step 2/3: AI is processing motion instructions...";
+
+            // 3. SEND TO WORKER (URL BASED)
+            const res = await fetch(`${WORKER_URL}?email=${email}&image_url=${encodeURIComponent(publicUrl)}&prompt=${encodeURIComponent(prompt)}`, {
+                method: "POST"
             });
-            
-            const result = await res.json();
-            if(!res.ok) throw new Error(result.error);
 
-            status.style.color = "#00c853";
-            status.innerHTML = `<b>SUCCESS!</b><br>ID: ${result.id}<br><small>Ready in ~2 mins.</small>`;
+            const result = await res.json();
+            if(!res.ok) throw new Error(result.error || "AI Engine busy");
+
+            status.style.color = var(--green);
+            status.innerHTML = `<b>SUCCESS!</b><br>ID: ${result.id}<br><small>Your video will be ready in ~2 mins.</small>`;
+
         } catch (e) {
             status.style.color = "#ff5252";
             status.innerText = "Error: " + e.message;
         }
     }
 
-    // 4. THE PROFIT ENGINE (Razorpay Integration)
     function startPay(amt, creds) {
         const email = document.getElementById('email').value;
-        if(!email) return alert("Please enter email to assign credits.");
-
+        if(!email) return alert("Please enter email first.");
+        
         const options = {
-            "key": "YOUR_RAZORPAY_LIVE_KEY", 
+            "key": "YOUR_RAZORPAY_LIVE_KEY",
             "amount": amt * 100,
             "currency": "INR",
             "name": "AI Video Magic",
-            "description": `${creds} Credits`,
+            "description": `${creds} Generation Credits`,
             "prefill": { "email": email },
             "handler": function (response){
-                alert("Payment Successful!");
-                setTimeout(fetchCredits, 2000);
+                alert("Payment successful! Credits will update in a moment.");
+                setTimeout(fetchCredits, 3000);
             }
         };
         new Razorpay(options).open();
     }
 </script>
+
 </body>
 </html>
-
