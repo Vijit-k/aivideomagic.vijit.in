@@ -3,37 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Video Magic</title>
+    <title>AI Video Magic | Nuantra</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
-        :root { --bg: #0d1117; --card: #161b22; --blue: #58a6ff; --green: #238636; --border: #30363d; }
-        body { font-family: sans-serif; background: var(--bg); color: #c9d1d9; display: flex; justify-content: center; padding: 40px 20px; }
-        .container { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 440px; }
-        .badge { background: #1f6feb; color: white; padding: 5px 12px; border-radius: 20px; float: right; font-weight: bold; font-size: 0.85rem; }
-        input { width: 100%; padding: 12px; margin: 10px 0; background: #0d1117; border: 1px solid var(--border); color: white; box-sizing: border-box; border-radius: 6px; }
-        button { width: 100%; padding: 15px; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        #status { margin-top: 15px; text-align: center; font-size: 0.9rem; }
+        :root { --bg: #03060b; --card: #0d1117; --accent: #58a6ff; --success: #238636; --border: #30363d; --text-dim: #8b949e; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+        
+        .glass-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .badge { background: rgba(31, 111, 235, 0.2); color: var(--accent); border: 1px solid var(--accent); padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.8rem; }
+        
+        h1 { font-size: 1.8rem; background: linear-gradient(90deg, #58a6ff, #bc8cff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
+        label { display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 8px; font-weight: bold; }
+        
+        input, textarea { width: 100%; padding: 14px; background: #161b22; border: 1px solid var(--border); border-radius: 8px; color: white; box-sizing: border-box; transition: 0.3s; }
+        input:focus { border-color: var(--accent); outline: none; }
+        
+        .btn-primary { width: 100%; padding: 16px; background: var(--success); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 20px; font-size: 1rem; }
+        
+        /* Pricing Cards Section */
+        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; width: 100%; max-width: 500px; }
+        .price-card { background: #161b22; border: 1px solid var(--border); padding: 20px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .price-card:hover { border-color: var(--accent); background: #1c2128; }
+        .price-card h3 { margin: 0; color: white; font-size: 1.2rem; }
+        .price-card p { font-size: 0.8rem; color: var(--text-dim); margin: 10px 0; }
+        .price-card .cost { font-size: 1.4rem; color: var(--accent); font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="badge" class="badge">CREDITS: --</div>
-    <h2 style="color: var(--blue);">AI Video Magic</h2>
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>AI Video Magic</h1>
+        <div id="badge" class="badge">CREDITS: --</div>
+    </div>
 
-    <label>Email Address</label>
-    <input type="email" id="email" placeholder="your@email.com" oninput="fetchCredits()">
+    <label>Account Email</label>
+    <input type="email" id="email" placeholder="vijitkumar@gmail.com" oninput="fetchCredits()">
 
-    <label>Upload Image</label>
+    <label>Step 1: Upload Source Image</label>
     <input type="file" id="imageInput" accept="image/*">
-    <p style="font-size: 0.75rem; color: #8b949e;">Image will be auto-resized to meet Stability AI's requirements.</p>
 
-    <button id="genBtn" onclick="startGeneration()">Generate Video</button>
-    <div id="status"></div>
+    <label>Step 2: Motion Prompt</label>
+    <textarea id="prompt" rows="2" placeholder="Describe the motion (e.g. waves crashing)"></textarea>
+
+    <button class="btn-primary" id="genBtn" onclick="processMagic()">Generate Magic</button>
+    <div id="status" style="margin-top: 15px; text-align: center; font-size: 0.9rem;"></div>
+</div>
+
+<div class="pricing-grid">
+    <div class="price-card" onclick="pay(499, 50)">
+        <h3>Starter</h3>
+        <p>50 Generations</p>
+        <div class="cost">₹499</div>
+    </div>
+    <div class="price-card" onclick="pay(999, 150)" style="border-color: #bc8cff;">
+        <h3 style="color: #bc8cff;">Pro</h3>
+        <p>150 Generations</p>
+        <div class="cost">₹999</div>
+    </div>
 </div>
 
 <script>
-    const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev"; // Your worker URL
+    const WORKER_URL = "https://stability-bridge.vijitkumar.workers.dev";
 
     async function fetchCredits() {
         const email = document.getElementById('email').value.trim().toLowerCase();
@@ -42,7 +73,7 @@
             const res = await fetch(`${WORKER_URL}?email=${email}`);
             const data = await res.json();
             document.getElementById('badge').innerText = `CREDITS: ${data.total_credits ?? 0}`;
-        } catch (e) { document.getElementById('badge').innerText = "CREDITS: Error"; }
+        } catch (e) { console.error("Credit sync failed"); }
     }
 
     async function autoResize(file) {
@@ -51,7 +82,6 @@
             img.src = URL.createObjectURL(file);
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Stability requires dimensions to be multiples of 64
                 canvas.width = Math.round(img.width / 64) * 64;
                 canvas.height = Math.round(img.height / 64) * 64;
                 const ctx = canvas.getContext('2d');
@@ -61,40 +91,46 @@
         });
     }
 
-    async function startGeneration() {
+    async function processMagic() {
         const email = document.getElementById('email').value.trim().toLowerCase();
         const file = document.getElementById('imageInput').files[0];
         const status = document.getElementById('status');
-        const btn = document.getElementById('genBtn');
-        
         if (!file || !email) return alert("Email and Image are required.");
 
-        btn.disabled = true;
-        status.style.color = "var(--blue)";
-        status.innerText = "Step 1/2: Optimizing Image Dimensions...";
-        
+        status.style.color = "var(--accent)";
+        status.innerText = "Step 1/2: Optimizing Image...";
+        const optimizedImage = await autoResize(file);
+
+        status.innerText = "Step 2/2: Sending to AI Relay...";
+        const fd = new FormData();
+        fd.append("image", optimizedImage);
+        fd.append("email", email);
+
         try {
-            const optimizedImage = await autoResize(file);
-
-            status.innerText = "Step 2/2: Sending to Stability AI...";
-            const fd = new FormData();
-            fd.append("image", optimizedImage);
-            // We append email for the Worker to verify later, but the Worker will strip it
-            fd.append("email", email); 
-
             const res = await fetch(WORKER_URL, { method: "POST", body: fd });
             const result = await res.json();
-            
-            if (!res.ok) throw new Error(result.error || "Stability Rejected Request");
-            
-            status.style.color = "var(--green)";
-            status.innerHTML = `<b>SUCCESS!</b> Video ID: ${result.id}<br><span style="font-size:0.8rem; color:#8b949e">Check your Stability dashboard!</span>`;
+            if (!res.ok) throw new Error(result.error || "Generation Failed");
+            status.style.color = "var(--success)";
+            status.innerHTML = `<b>SUCCESS!</b><br>Video ID: ${result.id}<br>Processing (~60s)`;
         } catch (err) {
-            status.style.color = "red";
+            status.style.color = "#ff7b72";
             status.innerText = "Error: " + err.message;
-        } finally {
-            btn.disabled = false;
         }
+    }
+
+    function pay(amt, creds) {
+        const email = document.getElementById('email').value;
+        if(!email) return alert("Please enter your email first to assign credits.");
+        var options = {
+            "key": "YOUR_RAZORPAY_KEY", // Update with your Razorpay Live Key
+            "amount": amt * 100,
+            "currency": "INR",
+            "name": "AI Video Magic",
+            "description": `${creds} Credits Purchase`,
+            "prefill": { "email": email },
+            "handler": function(resp) { alert("Payment received! Credits update automatically."); }
+        };
+        new Razorpay(options).open();
     }
 </script>
 </body>
